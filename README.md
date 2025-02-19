@@ -24,13 +24,6 @@ terraform init
 
 terraform validate
 
-terraform plan -out=tfplan
-
-terraform apply tfplan
-
-terraform destroy
-
-
 ## Best Practices
 - Always use `terraform plan` before `terraform apply`.
 - Do not commit `.terraform` or state files to Git.
