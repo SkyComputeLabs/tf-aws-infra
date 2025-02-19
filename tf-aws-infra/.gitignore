@@ -1,0 +1,19 @@
+# Terraform directories
+.terraform/
+terraform.tfstate.d/
+
+# .tfstate files
+*.tfstate
+.tfstate.
+
+# .tfvars files
+*.tfvars.json
+
+# tfplan files
+tfplan
+
+# Ignore Terraform lock file
+.terraform.lock.hcl
+
+# Ignore macOS system files
+.DS_Store
