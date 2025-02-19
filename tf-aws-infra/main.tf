@@ -1,9 +1,10 @@
+# Configure the AWS provider with region and profile
 provider "aws" {
   region  = var.aws_region
   profile = var.aws_profile
 }
 
-
+# Create a VPC with a specified CIDR block
 resource "aws_vpc" "main" {
   cidr_block = var.vpc_cidr
   tags = {
@@ -11,6 +12,7 @@ resource "aws_vpc" "main" {
   }
 }
 
+# Create an Internet Gateway and attach it to the VPC
 resource "aws_internet_gateway" "main-igw" {
   vpc_id = aws_vpc.main.id
   tags = {
@@ -18,6 +20,7 @@ resource "aws_internet_gateway" "main-igw" {
   }
 }
 
+# Create public subnets in different availability zones
 resource "aws_subnet" "public" {
   count                   = length(var.public_subnet_cidrs)
   vpc_id                  = aws_vpc.main.id
@@ -29,6 +32,7 @@ resource "aws_subnet" "public" {
   }
 }
 
+# Create private subnets in different availability zones
 resource "aws_subnet" "private" {
   count             = length(var.private_subnet_cidrs)
   vpc_id            = aws_vpc.main.id
@@ -39,6 +43,7 @@ resource "aws_subnet" "private" {
   }
 }
 
+# Create a public route table and attach the Internet Gateway
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   route {
@@ -50,6 +55,7 @@ resource "aws_route_table" "public" {
   }
 }
 
+# Create a private route table
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
   tags = {
@@ -57,12 +63,14 @@ resource "aws_route_table" "private" {
   }
 }
 
+# Associate public subnets with the public route table
 resource "aws_route_table_association" "public" {
   count          = length(aws_subnet.public)
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
 
+# Associate private subnets with the private route table
 resource "aws_route_table_association" "private" {
   count          = length(aws_subnet.private)
   subnet_id      = aws_subnet.private[count.index].id
