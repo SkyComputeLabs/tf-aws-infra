@@ -20,7 +20,6 @@ git clone <repository_url>
 cd tf-aws-infra
 
 terraform init
-
 terraform validate
 
 ## Best Practices
