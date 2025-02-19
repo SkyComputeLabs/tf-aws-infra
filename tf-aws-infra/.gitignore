@@ -7,7 +7,6 @@ terraform.tfstate.d/
 .tfstate.
 
 # .tfvars files
-*.tfvars
 *.tfvars.json
 
 # tfplan files
