@@ -7,7 +7,6 @@ This project provisions AWS infrastructure using Terraform. It includes:
 - An Internet Gateway for public access
 - Route tables to manage networking
 
-
 ## Prerequisites
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) (v1.x.x or later)
 - AWS CLI (configured with credentials)
