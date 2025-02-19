@@ -1,5 +1,6 @@
 # Terraform directories
-*/.terraform/
+.terraform/
+terraform.tfstate.d/
 
 # .tfstate files
 *.tfstate
@@ -12,6 +13,8 @@
 # tfplan files
 tfplan
 
+# Ignore Terraform lock file
 .terraform.lock.hcl
 
+# Ignore macOS system files
 .DS_Store
