@@ -1,0 +1,17 @@
+# Terraform directories
+*/.terraform/
+
+# .tfstate files
+*.tfstate
+.tfstate.
+
+# .tfvars files
+*.tfvars
+*.tfvars.json
+
+# tfplan files
+tfplan
+
+.terraform.lock.hcl
+
+.DS_Store
