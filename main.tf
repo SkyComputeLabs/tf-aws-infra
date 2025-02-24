@@ -1,5 +1,5 @@
-# Configure the AWS provider with region and profile
-provider "aws" {
+# Configure the AWS provider with region and profil
+    provider "aws" {
   region  = var.aws_region
   profile = var.aws_profile
 }
