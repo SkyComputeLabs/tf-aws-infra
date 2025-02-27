@@ -1,4 +1,4 @@
-# Configure the AWS provider with region and profile
+# Configure the AWS provider with region and profil
 provider "aws" {
   region = var.aws_region
   #profile = var.aws_profile
@@ -225,3 +225,4 @@ resource "google_compute_firewall" "allow_custom_port" {
   source_ranges = ["0.0.0.0/0"] # WARNING: For demonstration purposes only
   target_tags   = ["app-server"] # Apply rule to instances with this tag
 }
+
