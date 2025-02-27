@@ -30,3 +30,6 @@ region         = "us-central1"
 machine_type   = "n1-standard-1"
 zone           = "us-central1-a"
 image          = "projects/debian-cloud/global/images/debian-10-buster-v20220406"
+
+
+
