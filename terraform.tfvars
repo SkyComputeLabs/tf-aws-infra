@@ -15,8 +15,8 @@ private_rt_name = "main-private-rt"
 
 # New variables
 
-ami_id        = "ami-02530d9cb2af8cb77"
-instance_type = "t2.small"
+ami_id        = "ami-0aca0bcf1557f67bc"
+instance_type = "t2.micro"
 
 app_port = 8080
 
@@ -26,9 +26,9 @@ root_volume_delete_on_termination = true
 
 gcp_project_id = "csye6225-dev-451900"
 instance_name  = "csye6225-dev-instance"
-region         = "us-central1"
+region         = "us-east1"
 machine_type   = "n1-standard-1"
-zone           = "us-central1-a"
+zone           = "us-east1-b"
 image          = "projects/debian-cloud/global/images/debian-10-buster-v20220406"
 
 
