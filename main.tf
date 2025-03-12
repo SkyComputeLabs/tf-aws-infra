@@ -162,7 +162,7 @@ resource "aws_instance" "app_instance" {
   }
 }
 
-resource "google_compute_instance" "vm_instance"{
+resource "google_compute_instance" "vm_instance" {
   project      = var.gcp_project_id
   name         = var.instance_name
   machine_type = var.machine_type
@@ -194,8 +194,8 @@ resource "google_compute_firewall" "allow_http" {
     ports    = ["80"]
   }
 
-  source_ranges = ["0.0.0.0/0"] # WARNING: For demonstration purposes only
-  target_tags   = ["http-server"]  # Apply rule to instances with this tag
+  source_ranges = ["0.0.0.0/0"]   # WARNING: For demonstration purposes only
+  target_tags   = ["http-server"] # Apply rule to instances with this tag
 }
 
 resource "google_compute_firewall" "allow_https" {
@@ -208,7 +208,7 @@ resource "google_compute_firewall" "allow_https" {
     ports    = ["443"]
   }
 
-  source_ranges = ["0.0.0.0/0"] # WARNING: For demonstration purposes only
+  source_ranges = ["0.0.0.0/0"]    # WARNING: For demonstration purposes only
   target_tags   = ["https-server"] # Apply rule to instances with this tag
 }
 
@@ -222,7 +222,7 @@ resource "google_compute_firewall" "allow_custom_port" {
     ports    = [var.app_port] # Replace with your application port
   }
 
-  source_ranges = ["0.0.0.0/0"] # WARNING: For demonstration purposes only
+  source_ranges = ["0.0.0.0/0"]  # WARNING: For demonstration purposes only
   target_tags   = ["app-server"] # Apply rule to instances with this tag
 }
 
