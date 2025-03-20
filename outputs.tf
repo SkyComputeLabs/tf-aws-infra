@@ -28,8 +28,6 @@ output "vpc_cidr" {
   description = "VPC CIDR"
 }
 
-# New outputs
-
 output "instance_id" {
   value       = aws_instance.app_instance.id
   description = "ID of the EC2 instance"
@@ -50,27 +48,37 @@ output "security_group_id" {
   description = "ID of the security group attached to the EC2 instance"
 }
 
-output "default_vpc_id" {
-  value       = data.aws_vpc.default.id
-  description = "ID of the default VPC"
+#output "default_vpc_id" {
+#  value       = data.aws_vpc.default.id
+#  description = "ID of the default VPC"
+#}
+
+#output "default_subnet_id" {
+#  value       = tolist(data.aws_subnets.default.ids)[0]
+#  description = "ID of the default subnet used for the EC2 instance"
+#}
+
+output "rds_endpoint" {
+  value       = aws_db_instance.postgres_db.endpoint
+  description = "The connection endpoint for the RDS instance"
 }
 
-output "default_subnet_id" {
-  value       = tolist(data.aws_subnets.default.ids)[0]
-  description = "ID of the default subnet used for the EC2 instance"
+output "rds_db_name" {
+  value       = aws_db_instance.postgres_db.db_name
+  description = "The name of the database in the RDS instance"
 }
 
-output "instance_name" {
-  description = "Name of the GCE instance"
-  value       = google_compute_instance.vm_instance.name
+output "s3_bucket_name" {
+  value       = aws_s3_bucket.webapp_bucket.id
+  description = "The name of the S3 bucket"
 }
 
-output "instance_ip" {
-  description = "Internal IP of the GCE instance"
-  value       = google_compute_instance.vm_instance.network_interface[0].network_ip
+output "s3_bucket_arn" {
+  value       = aws_s3_bucket.webapp_bucket.arn
+  description = "The ARN of the S3 bucket"
 }
 
-output "instance_external_ip" {
-  description = "External IP of the GCE instance"
-  value       = google_compute_instance.vm_instance.network_interface[0].access_config[0].nat_ip
+output "db_security_group_id" {
+  value       = aws_security_group.db_sg.id
+  description = "The ID of the database security group"
 }

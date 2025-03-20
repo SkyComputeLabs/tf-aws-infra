@@ -1,25 +1,34 @@
-# Configure the AWS provider with region and profil
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 provider "aws" {
   region = var.aws_region
-  #profile = var.aws_profile
 }
 
-provider "google" {
-  project = var.gcp_project_id
-  region  = var.region
-  zone    = var.zone
+# Random suffix for unique resource names
+resource "random_string" "suffix" {
+  length  = 6
+  special = false
+  upper   = false
 }
 
-# Create a VPC with a specified CIDR block
+# VPC Infrastructure
 resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
   tags = {
     Name = var.vpc_name
   }
 }
 
-# Create an Internet Gateway and attach it to the VPC
-resource "aws_internet_gateway" "main-igw" {
+resource "aws_internet_gateway" "main_igw" {
   vpc_id = aws_vpc.main.id
   tags = {
     Name = var.igw_name
@@ -49,19 +58,18 @@ resource "aws_subnet" "private" {
   }
 }
 
-# Create a public route table and attach the Internet Gateway
+# Routing
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main-igw.id
+    gateway_id = aws_internet_gateway.main_igw.id
   }
   tags = {
     Name = var.public_rt_name
   }
 }
 
-# Create a private route table
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
   tags = {
@@ -69,47 +77,26 @@ resource "aws_route_table" "private" {
   }
 }
 
-# Associate public subnets with the public route table
 resource "aws_route_table_association" "public" {
   count          = length(aws_subnet.public)
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
 
-# Associate private subnets with the private route table
 resource "aws_route_table_association" "private" {
   count          = length(aws_subnet.private)
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
 }
 
-# Use the default VPC
-data "aws_vpc" "default" {
-  default = true
-}
-
-# Use the default subnets
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-}
-
-#Security group configuration
+# Security Groups
 resource "aws_security_group" "app_sg" {
-  name        = "application-security-group"
-  description = "Security group for web applications"
+  name        = "app-sg-${random_string.suffix.result}"
+  description = "Application security group"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
+    description = "HTTP"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -117,6 +104,7 @@ resource "aws_security_group" "app_sg" {
   }
 
   ingress {
+    description = "HTTPS"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
@@ -124,8 +112,9 @@ resource "aws_security_group" "app_sg" {
   }
 
   ingress {
-    from_port   = var.app_port
-    to_port     = var.app_port
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -138,8 +127,197 @@ resource "aws_security_group" "app_sg" {
   }
 
   tags = {
-    Name = "application-security-group"
+    Name = "app-sg-${random_string.suffix.result}"
   }
+}
+
+resource "aws_security_group" "db_sg" {
+  name        = "db-sg-${random_string.suffix.result}"
+  description = "Database security group"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "db-sg-${random_string.suffix.result}"
+  }
+}
+
+# IAM Configuration
+resource "aws_iam_role" "webapp_role" {
+  name = "webapp-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_policy" "rds_describe_params" {
+  name        = "RDSDescribeParametersPolicy-${random_string.suffix.result}"
+  description = "Allow describing RDS parameters"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "rds:DescribeDBParameters"
+        Resource = "arn:aws:rds:us-east-2:842676014449:pg:rds-db-parameter-group"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_user" "dev" {
+  name = "dev"
+}
+
+resource "aws_iam_user_policy_attachment" "user1_rds_describe_params" {
+  user       = aws_iam_user.dev.name
+  policy_arn = aws_iam_policy.rds_describe_params.arn
+}
+
+resource "aws_iam_policy" "essential_permissions" {
+  name        = "EssentialTerraformPermissions"
+  description = "Core permissions for Terraform operations"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "iam:*",
+          "rds:*",
+          "iam:GetRole",
+          "iam:ListAttachedUserPolicies",
+          "iam:CreatePolicy",
+          "iam:AttachUserPolicy",
+          "iam:PassRole"
+
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "essential_perms" {
+  user       = aws_iam_user.dev.name
+  policy_arn = aws_iam_policy.essential_permissions.arn
+}
+
+resource "aws_iam_policy" "instance_profile_permissions" {
+  name        = "InstanceProfilePermissions"
+  description = "Permissions for managing IAM instance profiles"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "iam:GetInstanceProfile",
+          "iam:CreateInstanceProfile",
+          "iam:AddRoleToInstanceProfile"
+        ],
+        Resource = [
+          "arn:aws:iam::842676014449:instance-profile/webapp-profile-*",
+          "arn:aws:iam::842676014449:role/webapp-role-*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "instance_profile_perms" {
+  user       = aws_iam_user.dev.name
+  policy_arn = aws_iam_policy.instance_profile_permissions.arn
+}
+
+resource "aws_iam_policy" "passrole_policy" {
+  name        = "PassRolePermissions"
+  description = "Allows passing the webapp-role to AWS services"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = "iam:PassRole",
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/webapp-role"
+      }
+    ]
+  })
+}
+
+# Attach the policy to User1
+resource "aws_iam_user_policy_attachment" "passrole_attach" {
+  user       = "dev"
+  policy_arn = aws_iam_policy.passrole_policy.arn
+}
+
+
+resource "aws_iam_instance_profile" "webapp_instance_profile" {
+  name = "webapp-profile-${random_string.suffix.result}"
+  role = aws_iam_role.webapp_role.name
+}
+
+resource "aws_iam_role_policy" "s3_access" {
+  name = "s3-access-policy-${random_string.suffix.result}"
+  role = aws_iam_role.webapp_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:ListBucket"
+      ]
+      Resource = [
+        "${aws_s3_bucket.webapp_bucket.arn}",
+        "${aws_s3_bucket.webapp_bucket.arn}/*"
+      ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "rds_access" {
+  name = "rds-access-policy-${random_string.suffix.result}"
+  role = aws_iam_role.webapp_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "rds:Describe*",
+        "rds:List*"
+      ]
+      Resource = "*"
+    }]
+  })
 }
 
 # EC2 instance configuration
@@ -148,6 +326,20 @@ resource "aws_instance" "app_instance" {
   instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   subnet_id              = aws_subnet.public[0].id
+  iam_instance_profile   = aws_iam_instance_profile.webapp_instance_profile.name
+
+
+  user_data = <<-EOF
+              #!/bin/bash
+              echo "DB_HOST=${aws_db_instance.postgres_db.endpoint}" >> /etc/environment
+              echo "DB_PORT=5432" >> /etc/environment
+              echo "DB_NAME=${aws_db_instance.postgres_db.db_name}" >> /etc/environment
+              echo "DB_USERNAME=${aws_db_instance.postgres_db.username}" >> /etc/environment
+              echo "DB_PASSWORD=${aws_db_instance.postgres_db.password}" >> /etc/environment
+              echo "S3_BUCKET_NAME=${aws_s3_bucket.webapp_bucket.bucket}" >> /etc/environment
+              echo "AWS_REGION=${var.aws_region}" >> /etc/environment
+              echo "APP_PORT=${var.app_port}" >> /etc/environment
+              EOF
 
   root_block_device {
     volume_size           = var.root_volume_size
@@ -162,67 +354,84 @@ resource "aws_instance" "app_instance" {
   }
 }
 
-resource "google_compute_instance" "vm_instance" {
-  project      = var.gcp_project_id
-  name         = var.instance_name
-  machine_type = var.machine_type
-  zone         = var.zone
 
-  boot_disk {
-    initialize_params {
-      image = var.image
-    }
+# RDS Configuration
+resource "aws_db_subnet_group" "db_subnet_group" {
+  name       = "db-subnet-${random_string.suffix.result}"
+  subnet_ids = aws_subnet.private[*].id
+
+  tags = {
+    Name = "db-subnet-${random_string.suffix.result}"
   }
-
-  network_interface {
-    network = var.network
-    access_config {
-      // Ephemeral IP
-    }
-  }
-
-  tags = ["http-server", "https-server", "app-server"]
 }
 
-resource "google_compute_firewall" "allow_http" {
-  name    = "allow-http-from-internet"
-  project = var.gcp_project_id
-  network = "default" # Or your specific network
+resource "aws_db_parameter_group" "db_params" {
+  name   = "db-params-${random_string.suffix.result}"
+  family = "postgres${var.db_engine_version}"
 
-  allow {
-    protocol = "tcp"
-    ports    = ["80"]
+  parameter {
+    name  = "log_connections"
+    value = "1"
   }
-
-  source_ranges = ["0.0.0.0/0"]   # WARNING: For demonstration purposes only
-  target_tags   = ["http-server"] # Apply rule to instances with this tag
 }
 
-resource "google_compute_firewall" "allow_https" {
-  name    = "allow-https-from-internet"
-  project = var.gcp_project_id
-  network = "default" # Or your specific network
+# Create PostgreSQQL RDS instance
+resource "aws_db_instance" "postgres_db" {
+  identifier             = "postgres-instance"
+  engine                 = "postgres"
+  engine_version         = var.db_engine_version
+  instance_class         = var.db_instance_type
+  allocated_storage      = var.db_allocated_storage
+  storage_type           = var.db_storage_type
+  db_name                = var.db_name
+  username               = var.db_username
+  password               = var.db_password
+  vpc_security_group_ids = [aws_security_group.db_sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
+  # parameter_group_name   = aws_db_parameter_group.params_grp.name
+  multi_az            = false
+  publicly_accessible = false
+  skip_final_snapshot = true
 
-  allow {
-    protocol = "tcp"
-    ports    = ["443"]
+  tags = {
+    Name = "PostgreSQL Database"
   }
-
-  source_ranges = ["0.0.0.0/0"]    # WARNING: For demonstration purposes only
-  target_tags   = ["https-server"] # Apply rule to instances with this tag
 }
 
-resource "google_compute_firewall" "allow_custom_port" {
-  name    = "allow-custom-port-from-internet"
-  project = var.gcp_project_id
-  network = "default" # Or your specific network
+# S3 Configuration
+resource "aws_s3_bucket" "webapp_bucket" {
+  bucket = var.s3_bucket_name
 
-  allow {
-    protocol = "tcp"
-    ports    = [var.app_port] # Replace with your application port
-  }
-
-  source_ranges = ["0.0.0.0/0"]  # WARNING: For demonstration purposes only
-  target_tags   = ["app-server"] # Apply rule to instances with this tag
+  force_destroy = true
 }
 
+resource "aws_s3_bucket_public_access_block" "webapp_bucket" {
+  bucket = aws_s3_bucket.webapp_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# IAM Policy Attachment Permissions
+resource "aws_iam_policy" "policy_attachment" {
+  name        = "PolicyAttachment-${random_string.suffix.result}"
+  description = "Allows attaching policies to users"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "iam:AttachUserPolicy"
+      Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/User1"
+    }]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "policy_attach" {
+  user       = aws_iam_user.dev.name
+  policy_arn = aws_iam_policy.policy_attachment.arn
+}
+
+data "aws_caller_identity" "current" {}

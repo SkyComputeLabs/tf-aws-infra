@@ -83,41 +83,90 @@ variable "root_volume_delete_on_termination" {
   default     = true
 }
 
-variable "region" {
+# variable "region" {
+#   type        = string
+#   description = "Region for the GCE instance"
+#   default     = "us-central1"
+# }
+
+# variable "gcp_project_id" {
+#   type        = string
+#   description = "The GCP project ID"
+# }
+
+# variable "instance_name" {
+#   type        = string
+#   description = "Name of the GCE instance"
+# }
+
+# variable "machine_type" {
+#   type        = string
+#   description = "Machine type for the GCE instance"
+#   default     = "n1-standard-1"
+# }
+
+# variable "zone" {
+#   type        = string
+#   description = "Zone for the GCE instance"
+#   default     = "us-central1-a"
+# }
+
+# variable "image" {
+#   type        = string
+#   description = "Boot disk image for the GCE instance"
+# }
+
+# variable "network" {
+#   type        = string
+#   description = "Network for the GCE instance"
+#   default     = "default"
+# }
+
+# PostgreSQL Database variables
+variable "db_engine_version" {
   type        = string
-  description = "Region for the GCE instance"
-  default     = "us-central1"
+  description = "Database engine version"
+  default     = "17"
 }
 
-variable "gcp_project_id" {
+variable "db_instance_type" {
   type        = string
-  description = "The GCP project ID"
+  description = "Instance type for the database"
+  default     = "db.t3.micro"
 }
 
-variable "instance_name" {
-  type        = string
-  description = "Name of the GCE instance"
+variable "db_allocated_storage" {
+  type        = number
+  description = "Allocated storage size in GB"
+  default     = 20
 }
 
-variable "machine_type" {
+variable "db_storage_type" {
   type        = string
-  description = "Machine type for the GCE instance"
-  default     = "n1-standard-1"
+  description = "Storage type for the database"
+  default     = "gp2"
 }
 
-variable "zone" {
+variable "db_username" {
   type        = string
-  description = "Zone for the GCE instance"
-  default     = "us-central1-a"
+  description = "Database username"
+  default     = "postgres"
 }
 
-variable "image" {
+variable "db_name" {
   type        = string
-  description = "Boot disk image for the GCE instance"
+  description = "Database name"
+  default     = "webapp"
 }
 
-variable "network" {
+variable "db_password" {
   type        = string
-  description = "Network for the GCE instance"
-  default     = "default"
+  description = "Database password"
+  default     = "postgres"
+}
+
+variable "s3_bucket_name" {
+  type        = string
+  description = "Name of the S3 bucket"
+  default     = "first-s3-bucket-6225"
 }
