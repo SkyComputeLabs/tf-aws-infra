@@ -11,6 +11,22 @@ provider "aws" {
   region = var.aws_region
 }
 
+#resource "aws_route53_zone" "dev" {
+#  name = "dev.shrutkeerti.me"
+#}
+
+#resource "aws_route53_zone" "demo" {
+#  name = "demo.shrutkeerti.me"
+#}
+
+#resource "aws_route53_record" "dev_a" {
+#  zone_id = aws_route53_zone.dev.zone_id
+#  name    = "dev.shrutkeerti.me"
+#  type    = "A"
+#  ttl     = "300"
+#  records = [aws_instance.app_instance.public_ip]
+#}
+
 # Random suffix for unique resource names
 resource "random_string" "suffix" {
   length  = 6
@@ -119,6 +135,14 @@ resource "aws_security_group" "app_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "Spring Boot Application Port"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -162,11 +186,11 @@ resource "aws_iam_role" "webapp_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
       Effect = "Allow"
       Principal = {
         Service = "ec2.amazonaws.com"
       }
+      Action = "sts:AssumeRole"
     }]
   })
 }
@@ -212,7 +236,8 @@ resource "aws_iam_policy" "essential_permissions" {
           "iam:ListAttachedUserPolicies",
           "iam:CreatePolicy",
           "iam:AttachUserPolicy",
-          "iam:PassRole"
+          "iam:PassRole",
+          "iam:DetachRolePolicy"
 
         ],
         Resource = "*"
@@ -238,7 +263,8 @@ resource "aws_iam_policy" "instance_profile_permissions" {
         Action = [
           "iam:GetInstanceProfile",
           "iam:CreateInstanceProfile",
-          "iam:AddRoleToInstanceProfile"
+          "iam:AddRoleToInstanceProfile",
+          "iam:DetachRolePolicy"
         ],
         Resource = [
           "arn:aws:iam::842676014449:instance-profile/webapp-profile-*",
@@ -262,8 +288,8 @@ resource "aws_iam_policy" "passrole_policy" {
     Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow",
-        Action = "iam:PassRole",
+        Effect   = "Allow",
+        Action   = "iam:PassRole",
         Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/webapp-role"
       }
     ]
@@ -282,9 +308,9 @@ resource "aws_iam_instance_profile" "webapp_instance_profile" {
   role = aws_iam_role.webapp_role.name
 }
 
-resource "aws_iam_role_policy" "s3_access" {
-  name = "s3-access-policy-${random_string.suffix.result}"
-  role = aws_iam_role.webapp_role.id
+resource "aws_iam_policy" "s3_access" {
+  name        = "s3-access-policy-${random_string.suffix.result}"
+  description = "S3 access policy"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -293,19 +319,25 @@ resource "aws_iam_role_policy" "s3_access" {
       Action = [
         "s3:GetObject",
         "s3:PutObject",
-        "s3:ListBucket"
+        "s3:ListBucket",
+        "s3:DeleteObject"
       ]
       Resource = [
-        "${aws_s3_bucket.webapp_bucket.arn}",
-        "${aws_s3_bucket.webapp_bucket.arn}/*"
+        "arn:aws:s3:::first-s3-bucket-6225",
+        "arn:aws:s3:::first-s3-bucket-6225/*"
       ]
     }]
   })
 }
 
-resource "aws_iam_role_policy" "rds_access" {
-  name = "rds-access-policy-${random_string.suffix.result}"
-  role = aws_iam_role.webapp_role.id
+resource "aws_iam_role_policy_attachment" "attach_s3_access" {
+  role       = aws_iam_role.webapp_role.name
+  policy_arn = aws_iam_policy.s3_access.arn
+}
+
+resource "aws_iam_policy" "rds_access" {
+  name        = "rds-access-policy-${random_string.suffix.result}"
+  description = "RDS access policy"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -313,11 +345,17 @@ resource "aws_iam_role_policy" "rds_access" {
       Effect = "Allow"
       Action = [
         "rds:Describe*",
-        "rds:List*"
+        "rds:List*",
+        "rds:Connect"
       ]
       Resource = "*"
     }]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "attach_rds_access" {
+  role       = aws_iam_role.webapp_role.name
+  policy_arn = aws_iam_policy.rds_access.arn
 }
 
 # EC2 instance configuration
@@ -339,6 +377,13 @@ resource "aws_instance" "app_instance" {
               echo "S3_BUCKET_NAME=${aws_s3_bucket.webapp_bucket.bucket}" >> /etc/environment
               echo "AWS_REGION=${var.aws_region}" >> /etc/environment
               echo "APP_PORT=${var.app_port}" >> /etc/environment
+
+              # Configure and start CloudWatch Agent
+              sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+                -a fetch-config \
+                -m ec2 \
+                -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent-config.json \ 
+                -s
               EOF
 
   root_block_device {
@@ -435,3 +480,42 @@ resource "aws_iam_user_policy_attachment" "policy_attach" {
 }
 
 data "aws_caller_identity" "current" {}
+
+resource "aws_iam_role_policy_attachment" "attach_cloudwatch_agent_policy" {
+  role       = aws_iam_role.webapp_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_iam_policy" "custom_cloudwatch_policy" {
+  name        = "CustomCloudWatchPolicy-${random_string.suffix.result}"
+  description = "Custom policy for CloudWatch logs and metrics"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "attach_custom_cloudwatch_policy" {
+  role       = aws_iam_role.webapp_role.name
+  policy_arn = aws_iam_policy.custom_cloudwatch_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
+  role       = aws_iam_role.webapp_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+

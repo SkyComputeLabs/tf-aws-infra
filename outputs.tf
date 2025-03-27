@@ -82,3 +82,12 @@ output "db_security_group_id" {
   value       = aws_security_group.db_sg.id
   description = "The ID of the database security group"
 }
+
+#output "dev_name_servers" {
+#  value = aws_route53_zone.dev.name_servers
+#}
+
+#output "demo_name_servers" {
+#  value = aws_route53_zone.demo.name_servers
+#}
+
