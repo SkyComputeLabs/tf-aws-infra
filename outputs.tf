@@ -28,20 +28,20 @@ output "vpc_cidr" {
   description = "VPC CIDR"
 }
 
-output "instance_id" {
-  value       = aws_instance.app_instance.id
-  description = "ID of the EC2 instance"
-}
+#output "instance_id" {
+#  value       = aws_instance.app_instance.id
+#  description = "ID of the EC2 instance"
+#}
 
-output "instance_public_ip" {
-  value       = aws_instance.app_instance.public_ip
-  description = "Public IP address of the EC2 instance"
-}
+#output "instance_public_ip" {
+#  value       = aws_instance.app_instance.public_ip
+#  description = "Public IP address of the EC2 instance"
+#}
 
-output "instance_private_ip" {
-  value       = aws_instance.app_instance.private_ip
-  description = "Private IP address of the EC2 instance"
-}
+#output "instance_private_ip" {
+#  value       = aws_instance.app_instance.private_ip
+#  description = "Private IP address of the EC2 instance"
+#}
 
 output "security_group_id" {
   value       = aws_security_group.app_sg.id
@@ -90,4 +90,17 @@ output "db_security_group_id" {
 #output "demo_name_servers" {
 #  value = aws_route53_zone.demo.name_servers
 #}
+
+#output "instance_ids" {
+#  description = "IDs of instances launched by the Auto Scaling Group"
+#  value       = aws_autoscaling_group.web_app_asg.instances
+#}
+
+output "load_balancer_dns_name" {
+  description = "DNS name of the Application Load Balancer"
+  value       = aws_lb.web_app_lb.dns_name
+}
+
+
+
 

@@ -171,3 +171,45 @@ variable "s3_bucket_name" {
   default     = "first-s3-bucket-6225"
 }
 
+variable "public_ip_address" {
+  description = "The public IPv4 address to be used in security group rules."
+  #default     = "73.143.65.26/32"
+  default = "0.0.0.0/0"
+}
+
+#variable "key_name" {
+#  description = "The name of the key pair to use for SSH access"
+#}
+
+#variable "subnet_id" {
+#  description = "The subnet ID for the EC2 instance or launch template"
+#}
+
+#variable "subnet_ids" {
+#  description = "The list of subnet IDs for the load balancer"
+#}
+
+variable "desired_capacity" {
+  type        = number
+  description = "The desired number of instances in the Auto Scaling Group"
+  default     = 1
+}
+
+variable "min_size" {
+  type        = number
+  description = "The minimum number of instances in the Auto Scaling Group"
+  default     = 3
+}
+
+variable "max_size" {
+  type        = number
+  description = "The maximum number of instances in the Auto Scaling Group"
+  default     = 5
+}
+
+variable "key_name" {
+  description = "The name of the key pair to use for SSH access"
+  type        = string
+}
+
+
