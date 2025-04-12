@@ -212,4 +212,17 @@ variable "key_name" {
   type        = string
 }
 
+variable "kms_key_alias" {
+  type        = string
+  description = "KMS alias name"
+  default     = "csye6225-key"
+}
+
+variable "secret_name" {
+  type        = string
+  description = "Secret Manager secret name"
+  default     = "csye6225-db-secret"
+}
+
+
 

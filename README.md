@@ -14,6 +14,13 @@ This project provisions AWS infrastructure using Terraform. It includes:
 
 ## Setup Instructions
 
+# AWS CLI command to import SSL Certificate (Demo Environment)
+aws acm import-certificate \
+  --certificate fileb://path/to/domain.crt \
+  --private-key fileb://path/to/private-key.key \
+  --certificate-chain fileb://path/to/ca-bundle.crt \
+  --region us-east-2
+
 ### 1. Clone the Repository
 ```sh
 git clone <repository_url>
@@ -21,6 +28,7 @@ cd tf-aws-infra
 
 terraform init
 terraform validate
+terraform apply-auto-approve-var="ami_id=<your-ami-id>"
 
 ## Best Practices
 - Always use `terraform plan` before `terraform apply`.
