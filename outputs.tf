@@ -101,6 +101,31 @@ output "load_balancer_dns_name" {
   value       = aws_lb.web_app_lb.dns_name
 }
 
+output "kms_keys" {
+  description = "KMS Keys ARNs"
+  value = {
+    ec2_key     = aws_kms_key.ec2_key.arn
+    rds_key     = aws_kms_key.rds_key.arn
+    s3_key      = aws_kms_key.s3_key.arn
+    secrets_key = aws_kms_key.secrets_key.arn
+  }
+}
+
+output "db_password_secret_arn" {
+  description = "Secrets Manager ARN for DB password"
+  value       = aws_secretsmanager_secret.db_password.arn
+}
+
+output "acm_dev_cert_arn" {
+  description = "ACM Certificate ARN for Dev environment"
+  value       = aws_acm_certificate.dev_cert.arn
+}
+
+output "generated_db_password" {
+  value     = random_password.db_password.result
+  sensitive = true
+}
+
 
 
 
